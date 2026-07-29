@@ -189,12 +189,11 @@ function MealBoxApp({ user, signOut }) {
         </div>
         <div className="mp-header-actions">
           <button
-            className="mp-icon-btn"
+            className={`mp-chip herb ${cycleEnabled ? "active" : ""}`}
             onClick={() => setShowCycleSettings(true)}
-            aria-label="Cycle-sync settings"
-            style={cycleEnabled ? { color: "var(--brick-deep)", borderColor: "var(--brick)" } : undefined}
+            title="Cycle-sync settings"
           >
-            <Sparkles size={15} />
+            <Sparkles size={12} /> Cycle sync
           </button>
           <button className="mp-icon-btn" onClick={signOut} aria-label="Sign out">
             <LogOut size={15} />
