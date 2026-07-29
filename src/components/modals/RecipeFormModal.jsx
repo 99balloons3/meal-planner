@@ -2,8 +2,9 @@ import { useState } from "react";
 import { Plus, X, Check, Star } from "lucide-react";
 import { CATEGORIES, SECTIONS } from "../../lib/constants";
 import { uid } from "../../lib/date";
+import { PHASE_ORDER, PHASES } from "../../lib/cycle";
 
-export default function RecipeFormModal({ initial, onClose, onSave }) {
+export default function RecipeFormModal({ initial, onClose, onSave, cycleEnabled }) {
   const [name, setName] = useState(initial?.name || "");
   const [category, setCategory] = useState(initial?.category || "Dinner");
   const [type, setType] = useState(initial?.type || "single");
@@ -11,6 +12,7 @@ export default function RecipeFormModal({ initial, onClose, onSave }) {
   const [favorite, setFavorite] = useState(initial?.favorite || false);
   const [tags, setTags] = useState(initial?.tags || []);
   const [tagDraft, setTagDraft] = useState("");
+  const [phaseTags, setPhaseTags] = useState(initial?.phaseTags || []);
   const [ingredients, setIngredients] = useState(
     initial?.ingredients?.length ? initial.ingredients : [{ id: uid(), name: "", qty: "", unit: "", section: "Produce" }]
   );
@@ -49,6 +51,9 @@ export default function RecipeFormModal({ initial, onClose, onSave }) {
   function removeTag(t) {
     setTags(tags.filter((x) => x !== t));
   }
+  function togglePhaseTag(key) {
+    setPhaseTags((cur) => (cur.includes(key) ? cur.filter((k) => k !== key) : [...cur, key]));
+  }
 
   function handleSave() {
     if (!name.trim()) return;
@@ -61,6 +66,7 @@ export default function RecipeFormModal({ initial, onClose, onSave }) {
       prepNotes: prepNotes.trim(),
       favorite,
       tags,
+      phaseTags,
       ingredients: cleanIngredients,
       steps: type === "multi" ? steps.filter((s) => s.trim()) : [singleInstructions.trim()],
     };
@@ -130,6 +136,24 @@ export default function RecipeFormModal({ initial, onClose, onSave }) {
               </span>
             ))}
           </div>
+        )}
+
+        {cycleEnabled && (
+          <>
+            <label className="mp-label">Good for these cycle phases (optional)</label>
+            <div className="mp-scrollx" style={{ marginBottom: 14 }}>
+              {PHASE_ORDER.map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`mp-chip herb ${phaseTags.includes(key) ? "active" : ""}`}
+                  onClick={() => togglePhaseTag(key)}
+                >
+                  {PHASES[key].emoji} {PHASES[key].label}
+                </button>
+              ))}
+            </div>
+          </>
         )}
 
         <label className="mp-label">Prep notes (optional)</label>

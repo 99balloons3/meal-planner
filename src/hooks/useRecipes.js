@@ -11,6 +11,7 @@ const STARTER_RECIPES = [
     type: "single",
     prepNotes: "Make in mason jars the night before — grab and go.",
     tags: ["quick", "make-ahead"],
+    phaseTags: ["follicular", "ovulatory"],
     favorite: true,
     ingredients: [
       { id: uid(), name: "rolled oats", qty: "1", unit: "cup", section: "Pantry" },
@@ -27,6 +28,7 @@ const STARTER_RECIPES = [
     type: "multi",
     prepNotes: "Slice peppers and onions ahead on Sunday.",
     tags: ["sheet-pan", "family favorite"],
+    phaseTags: ["luteal"],
     favorite: false,
     ingredients: [
       { id: uid(), name: "chicken breast", qty: "1.5", unit: "lb", section: "Meat & Seafood" },
@@ -44,6 +46,7 @@ const STARTER_RECIPES = [
     type: "single",
     prepNotes: "",
     tags: ["vegetarian", "quick"],
+    phaseTags: ["menstrual"],
     favorite: false,
     ingredients: [
       { id: uid(), name: "romaine lettuce", qty: "1", unit: "head", section: "Produce" },
@@ -66,6 +69,7 @@ function fromRow(row) {
     ingredients: row.ingredients,
     steps: row.steps,
     tags: row.tags || [],
+    phaseTags: row.phase_tags || [],
     favorite: !!row.favorite,
     updatedAt: row.updated_at,
   };
@@ -82,6 +86,7 @@ function toRow(recipe, userId) {
     ingredients: recipe.ingredients,
     steps: recipe.steps,
     tags: recipe.tags || [],
+    phase_tags: recipe.phaseTags || [],
     favorite: !!recipe.favorite,
     updated_at: recipe.updatedAt,
   };

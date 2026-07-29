@@ -1,12 +1,14 @@
 import { useCallback, useMemo, useState } from "react";
-import { Calendar, BookOpen, ShoppingCart, Plus, LogOut, WifiOff, RefreshCw } from "lucide-react";
+import { Calendar, BookOpen, ShoppingCart, Plus, LogOut, WifiOff, RefreshCw, Sparkles } from "lucide-react";
 import { useAuth } from "./hooks/useAuth";
 import { useRecipes } from "./hooks/useRecipes";
 import { useWeek, loadWeekDoc } from "./hooks/useWeek";
 import { useSyncStatus } from "./hooks/useSyncStatus";
+import { useCycleSettings } from "./hooks/useCycleSettings";
 import { addDays, fmtISO, getMonday } from "./lib/date";
 import { SECTIONS } from "./lib/constants";
 import { duplicateWeek } from "./lib/weekDoc";
+import { phaseForDate } from "./lib/cycle";
 
 import AuthGate from "./components/AuthGate";
 import PlanTab from "./components/PlanTab";
@@ -17,6 +19,7 @@ import NoteModal from "./components/modals/NoteModal";
 import RecipeFormModal from "./components/modals/RecipeFormModal";
 import RecipeDetailModal from "./components/modals/RecipeDetailModal";
 import AddItemModal from "./components/modals/AddItemModal";
+import CycleSettingsModal from "./components/modals/CycleSettingsModal";
 
 export default function App() {
   const auth = useAuth();
@@ -45,6 +48,7 @@ function MealBoxApp({ user, signOut }) {
   const [editingRecipe, setEditingRecipe] = useState(null);
   const [viewingRecipe, setViewingRecipe] = useState(null);
   const [showAddItem, setShowAddItem] = useState(false);
+  const [showCycleSettings, setShowCycleSettings] = useState(false);
   const [toast, setToast] = useState("");
 
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
@@ -53,8 +57,11 @@ function MealBoxApp({ user, signOut }) {
   const { recipes, ready: recipesReady, saveRecipe, deleteRecipe, toggleFavorite } = useRecipes(user.id);
   const week = useWeek(user.id, weekKey, days);
   const sync = useSyncStatus();
+  const cycle = useCycleSettings(user.id);
+  const cycleEnabled = !!cycle.settings?.enabled;
 
   const recipeById = useCallback((id) => recipes.find((r) => r.id === id), [recipes]);
+  const getPhaseForDate = useCallback((dateStr) => phaseForDate(dateStr, cycle.settings), [cycle.settings]);
 
   function flashToast(msg) {
     setToast(msg);
@@ -67,15 +74,26 @@ function MealBoxApp({ user, signOut }) {
     week.doc.dayOrder.forEach((dateStr) => {
       const day = week.doc.days[dateStr];
       if (!day) return;
+      const phase = cycleEnabled ? getPhaseForDate(dateStr) : null;
       day.slots.forEach((slot) => {
         if (!slot.recipeId) return;
         const recipe = recipeById(slot.recipeId);
         if (!recipe) return;
+        const isPhaseMatch = phase && (recipe.phaseTags || []).includes(phase.key);
         recipe.ingredients.forEach((ing) => {
           const key = `${ing.name.trim().toLowerCase()}|${ing.unit || ""}`;
           if (!map[key]) {
-            map[key] = { id: key, name: ing.name, unit: ing.unit, section: ing.section || "Other", qty: 0, qtyParts: [] };
+            map[key] = {
+              id: key,
+              name: ing.name,
+              unit: ing.unit,
+              section: ing.section || "Other",
+              qty: 0,
+              qtyParts: [],
+              phaseRelevant: false,
+            };
           }
+          if (isPhaseMatch) map[key].phaseRelevant = true;
           const n = parseFloat(ing.qty);
           if (!isNaN(n)) map[key].qty += n;
           else if (ing.qty) map[key].qtyParts.push(ing.qty);
@@ -88,7 +106,7 @@ function MealBoxApp({ user, signOut }) {
       if (it.qtyParts.length) qtyLabel = [qtyLabel, ...it.qtyParts].filter(Boolean).join(" + ");
       return { ...it, qtyLabel, source: "auto" };
     });
-  }, [week.doc, recipeById]);
+  }, [week.doc, recipeById, cycleEnabled, getPhaseForDate]);
 
   const allItems = useMemo(() => {
     const manual = (week.doc?.shopping.manual || []).map((it) => ({ ...it, source: "manual" }));
@@ -101,6 +119,9 @@ function MealBoxApp({ user, signOut }) {
     allItems.forEach((it) => {
       const sec = SECTIONS.includes(it.section) ? it.section : "Other";
       bySection[sec].push(it);
+    });
+    Object.keys(bySection).forEach((s) => {
+      bySection[s].sort((a, b) => (b.phaseRelevant ? 1 : 0) - (a.phaseRelevant ? 1 : 0));
     });
     return bySection;
   }, [allItems]);
@@ -154,6 +175,8 @@ function MealBoxApp({ user, signOut }) {
     }
   }
 
+  const pickerPhase = pickerSlot && cycleEnabled ? getPhaseForDate(pickerSlot.dateStr) : null;
+
   return (
     <div className="mp-root">
       <div className="mp-header">
@@ -165,6 +188,14 @@ function MealBoxApp({ user, signOut }) {
           <div className="mp-tagline">weekly plans · shopping · recipes</div>
         </div>
         <div className="mp-header-actions">
+          <button
+            className="mp-icon-btn"
+            onClick={() => setShowCycleSettings(true)}
+            aria-label="Cycle-sync settings"
+            style={cycleEnabled ? { color: "var(--brick-deep)", borderColor: "var(--brick)" } : undefined}
+          >
+            <Sparkles size={15} />
+          </button>
           <button className="mp-icon-btn" onClick={signOut} aria-label="Sign out">
             <LogOut size={15} />
           </button>
@@ -200,6 +231,8 @@ function MealBoxApp({ user, signOut }) {
           removeSlot={week.removeSlot}
           canDuplicate
           onDuplicateLastWeek={handleDuplicateLastWeek}
+          getPhaseForDate={cycleEnabled ? getPhaseForDate : null}
+          cycleSettings={cycleEnabled ? cycle.settings : null}
         />
       )}
 
@@ -222,6 +255,7 @@ function MealBoxApp({ user, signOut }) {
           onAddItem={() => setShowAddItem(true)}
           weekLabel={weekLabel(weekStart)}
           onShare={handleShareShoppingList}
+          cycleEnabled={cycleEnabled}
         />
       )}
 
@@ -255,6 +289,7 @@ function MealBoxApp({ user, signOut }) {
           recipes={recipes}
           slotLabel={pickerSlot.label}
           current={week.doc.days[pickerSlot.dateStr]?.slots.find((s) => s.id === pickerSlot.slotId)?.recipeId}
+          phase={pickerPhase}
           onClose={() => setPickerSlot(null)}
           onSelect={(rid) => {
             week.setMeal(pickerSlot.dateStr, pickerSlot.slotId, rid);
@@ -282,6 +317,7 @@ function MealBoxApp({ user, signOut }) {
       {showRecipeForm && (
         <RecipeFormModal
           initial={editingRecipe}
+          cycleEnabled={cycleEnabled}
           onClose={() => setShowRecipeForm(false)}
           onSave={async (recipe) => {
             await saveRecipe(recipe);
@@ -319,6 +355,8 @@ function MealBoxApp({ user, signOut }) {
           }}
         />
       )}
+
+      {showCycleSettings && <CycleSettingsModal cycle={cycle} onClose={() => setShowCycleSettings(false)} />}
 
       {toast && <div className="mp-toast">{toast}</div>}
     </div>

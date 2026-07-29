@@ -70,7 +70,8 @@ export default function RecipesTab({ recipes, onView, onToggleFavorite }) {
           <p>No recipes match yet. Add your first one with the + button.</p>
         </div>
       ) : (
-        filtered.map((r) => (
+        <div className="mp-recipe-grid">
+        {filtered.map((r) => (
           <div key={r.id} className="mp-index-card mp-recipe-card">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div style={{ flex: 1, cursor: "pointer" }} onClick={() => onView(r)}>
@@ -98,7 +99,8 @@ export default function RecipesTab({ recipes, onView, onToggleFavorite }) {
               </div>
             </div>
           </div>
-        ))
+        ))}
+        </div>
       )}
     </div>
   );
