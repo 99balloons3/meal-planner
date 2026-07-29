@@ -12,14 +12,21 @@ export default function ShoppingTab({
   onAddItem,
   weekLabel,
   onShare,
+  cycleEnabled,
 }) {
   const nonEmptySections = SECTIONS.filter((s) => itemsBySection[s].length > 0);
+  const hasPhaseRelevant = nonEmptySections.some((s) => itemsBySection[s].some((it) => it.phaseRelevant));
 
   return (
     <div className="mp-section">
       <div className="mp-h2">Shopping list</div>
       <p className="mp-sub">
         For {weekLabel} · {checkedCount}/{totalCount} in cart
+        {cycleEnabled && hasPhaseRelevant && (
+          <>
+            {" "}· <span className="mp-phase-dot" style={{ marginLeft: 0 }} /> good for this week's phase
+          </>
+        )}
       </p>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
@@ -50,37 +57,40 @@ export default function ShoppingTab({
           <p>Plan some meals this week and your ingredients will land here automatically.</p>
         </div>
       ) : (
-        nonEmptySections.map((section) => (
-          <div key={section}>
-            <div className="mp-section-header">{section}</div>
-            <div className="mp-index-card" style={{ padding: "2px 14px 2px 30px" }}>
-              {itemsBySection[section].map((item) => (
-                <div key={item.id} className="mp-check-row">
-                  <div className={`mp-checkbox ${checked[item.id] ? "checked" : ""}`} onClick={() => onToggle(item.id)}>
-                    {checked[item.id] && <Check size={13} color="#fff" />}
+        <div className="mp-shopping-columns">
+          {nonEmptySections.map((section) => (
+            <div key={section}>
+              <div className="mp-section-header">{section}</div>
+              <div className="mp-index-card" style={{ padding: "2px 14px 2px 30px" }}>
+                {itemsBySection[section].map((item) => (
+                  <div key={item.id} className={`mp-check-row ${item.phaseRelevant ? "mp-phase-relevant" : ""}`}>
+                    <div className={`mp-checkbox ${checked[item.id] ? "checked" : ""}`} onClick={() => onToggle(item.id)}>
+                      {checked[item.id] && <Check size={13} color="#fff" />}
+                    </div>
+                    <div style={{ flex: 1, cursor: "pointer" }} onClick={() => onToggle(item.id)}>
+                      <span
+                        style={{
+                          fontSize: 14,
+                          textDecoration: checked[item.id] ? "line-through" : "none",
+                          color: checked[item.id] ? "var(--ink-faint)" : "var(--ink)",
+                        }}
+                      >
+                        {item.name}
+                      </span>
+                      {item.phaseRelevant && <span className="mp-phase-dot" title="Good for this week's cycle phase" />}
+                    </div>
+                    {item.qtyLabel && <span className="mp-qty">{item.qtyLabel}</span>}
+                    {item.source === "manual" && (
+                      <button className="mp-btn-ghost mp-no-print" style={{ color: "var(--ink-faint)" }} onClick={() => onRemoveManual(item.id)} aria-label="Remove item">
+                        <X size={14} />
+                      </button>
+                    )}
                   </div>
-                  <div style={{ flex: 1, cursor: "pointer" }} onClick={() => onToggle(item.id)}>
-                    <span
-                      style={{
-                        fontSize: 14,
-                        textDecoration: checked[item.id] ? "line-through" : "none",
-                        color: checked[item.id] ? "var(--ink-faint)" : "var(--ink)",
-                      }}
-                    >
-                      {item.name}
-                    </span>
-                  </div>
-                  {item.qtyLabel && <span className="mp-qty">{item.qtyLabel}</span>}
-                  {item.source === "manual" && (
-                    <button className="mp-btn-ghost mp-no-print" style={{ color: "var(--ink-faint)" }} onClick={() => onRemoveManual(item.id)} aria-label="Remove item">
-                      <X size={14} />
-                    </button>
-                  )}
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        ))
+          ))}
+        </div>
       )}
     </div>
   );

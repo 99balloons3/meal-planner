@@ -1,4 +1,5 @@
 import { Pencil, Trash2, Star } from "lucide-react";
+import { PHASES } from "../../lib/cycle";
 
 export default function RecipeDetailModal({ recipe, onClose, onEdit, onDelete, onToggleFavorite }) {
   return (
@@ -23,6 +24,16 @@ export default function RecipeDetailModal({ recipe, onClose, onEdit, onDelete, o
           <div className="mp-recipe-tags" style={{ marginTop: 8 }}>
             {recipe.tags.map((t) => (
               <span key={t} className="mp-tag">{t}</span>
+            ))}
+          </div>
+        )}
+
+        {recipe.phaseTags?.length > 0 && (
+          <div className="mp-recipe-tags" style={{ marginTop: 6 }}>
+            {recipe.phaseTags.map((p) => (
+              <span key={p} className="mp-phase-pill">
+                {PHASES[p]?.emoji} {PHASES[p]?.label}
+              </span>
             ))}
           </div>
         )}

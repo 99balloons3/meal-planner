@@ -1,6 +1,10 @@
 -- The Meal Box — Supabase schema
 -- Run this whole file once in the Supabase SQL editor for your project
 -- (Project → SQL Editor → New query → paste → Run).
+--
+-- This file is safe to re-run: every statement is idempotent, so if you
+-- already ran an earlier version of it, re-running the latest copy just
+-- picks up whatever's new (e.g. cycle-sync) without touching existing data.
 
 create extension if not exists "pgcrypto";
 
@@ -22,6 +26,10 @@ create table if not exists public.recipes (
   updated_at timestamptz not null default now()
 );
 
+-- Optional cycle-sync phase tags (e.g. "luteal", "follicular") a recipe is
+-- good for. Added after the initial release; IF NOT EXISTS keeps re-runs safe.
+alter table public.recipes add column if not exists phase_tags jsonb not null default '[]'::jsonb;
+
 create index if not exists recipes_user_id_idx on public.recipes (user_id);
 
 -- ---------------------------------------------------------------------------
@@ -42,6 +50,23 @@ create table if not exists public.weeks (
 
 create index if not exists weeks_user_id_idx on public.weeks (user_id);
 create index if not exists weeks_user_week_idx on public.weeks (user_id, week_start);
+
+-- ---------------------------------------------------------------------------
+-- cycle_settings: one row per user. Powers the optional cycle-sync feature —
+-- entirely private to the account, same RLS pattern as everything else.
+-- ---------------------------------------------------------------------------
+create table if not exists public.cycle_settings (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null unique references auth.users (id) on delete cascade,
+  enabled boolean not null default false,
+  start_date date,
+  avg_cycle_length int not null default 28,
+  macro_targets jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists cycle_settings_user_id_idx on public.cycle_settings (user_id);
 
 -- ---------------------------------------------------------------------------
 -- keep updated_at fresh on every update
@@ -66,11 +91,17 @@ create trigger weeks_set_updated_at
   before update on public.weeks
   for each row execute function public.set_updated_at();
 
+drop trigger if exists cycle_settings_set_updated_at on public.cycle_settings;
+create trigger cycle_settings_set_updated_at
+  before update on public.cycle_settings
+  for each row execute function public.set_updated_at();
+
 -- ---------------------------------------------------------------------------
 -- Row Level Security: every user can only ever see/touch their own rows
 -- ---------------------------------------------------------------------------
 alter table public.recipes enable row level security;
 alter table public.weeks enable row level security;
+alter table public.cycle_settings enable row level security;
 
 drop policy if exists "recipes_select_own" on public.recipes;
 create policy "recipes_select_own" on public.recipes
@@ -102,4 +133,20 @@ create policy "weeks_update_own" on public.weeks
 
 drop policy if exists "weeks_delete_own" on public.weeks;
 create policy "weeks_delete_own" on public.weeks
+  for delete using (auth.uid() = user_id);
+
+drop policy if exists "cycle_settings_select_own" on public.cycle_settings;
+create policy "cycle_settings_select_own" on public.cycle_settings
+  for select using (auth.uid() = user_id);
+
+drop policy if exists "cycle_settings_insert_own" on public.cycle_settings;
+create policy "cycle_settings_insert_own" on public.cycle_settings
+  for insert with check (auth.uid() = user_id);
+
+drop policy if exists "cycle_settings_update_own" on public.cycle_settings;
+create policy "cycle_settings_update_own" on public.cycle_settings
+  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists "cycle_settings_delete_own" on public.cycle_settings;
+create policy "cycle_settings_delete_own" on public.cycle_settings
   for delete using (auth.uid() = user_id);

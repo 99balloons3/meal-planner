@@ -23,6 +23,17 @@ deployed on **Vercel**.
   synced automatically once you're back online
 - Sign in with a magic link (or email + password) and your data follows you
   across every device
+- Responsive layout: single-column with a bottom tab bar on phones, a
+  sidebar-nav multi-column layout on tablet/desktop (full 7-day calendar grid
+  on wide screens)
+- Optional **cycle-sync**: log a period start date and average cycle length
+  to see your current phase (menstrual/follicular/ovulatory/luteal) on the
+  Plan tab, tag recipes with the phases they're good for, get phase-first
+  recipe suggestions when picking a meal, editable daily macro targets per
+  phase, and phase-relevant shopping list highlighting. Off by default and
+  fully toggleable — turn it off any week for a plain meal planner. All
+  cycle data lives in your own account behind the same Row Level Security as
+  everything else.
 
 ## 1. Set up Supabase (free tier)
 
@@ -30,8 +41,11 @@ deployed on **Vercel**.
    plenty for personal use).
 2. Open **SQL Editor → New query**, paste the entire contents of
    [`supabase/schema.sql`](./supabase/schema.sql), and run it. This creates
-   the `recipes` and `weeks` tables with Row Level Security so every user
-   can only ever read/write their own data.
+   the `recipes`, `weeks`, and `cycle_settings` tables with Row Level
+   Security so every user can only ever read/write their own data. The file
+   is safe to re-run any time — if you set this project up before cycle-sync
+   existed, just re-run the latest copy and it'll add what's new without
+   touching your existing data.
 3. Go to **Authentication → Providers** and make sure **Email** is enabled.
    The default Supabase email service works out of the box for the magic
    link / confirmation emails (fine for personal use; for higher volume,
@@ -117,12 +131,12 @@ multi-writer conflict resolution.
 
 ```
 src/
-  lib/            data model, date helpers, Supabase client, offline sync engine
-  hooks/          useAuth, useRecipes, useWeek, useSyncStatus
+  lib/            data model, date/cycle-phase helpers, Supabase client, offline sync engine
+  hooks/          useAuth, useRecipes, useWeek, useSyncStatus, useCycleSettings
   components/     PlanTab, RecipesTab, ShoppingTab, AuthGate, modals/
-  styles.css      design system (index-card aesthetic, palette, type)
+  styles.css      design system (index-card aesthetic, palette, type, responsive breakpoints)
 supabase/
-  schema.sql      tables, RLS policies, triggers — run once in the SQL editor
+  schema.sql      tables, RLS policies, triggers — safe to re-run in the SQL editor
 scripts/
   gen-icons.mjs   regenerates PWA icons from the SVG sources in scripts/
 ```

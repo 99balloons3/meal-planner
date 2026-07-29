@@ -31,6 +31,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { addDays, fmtISO } from "../lib/date";
 import { DAY_NAMES } from "../lib/constants";
 import { slotLabel } from "../lib/weekDoc";
+import { macroTargetsFor } from "../lib/cycle";
 
 const SLOT_ICONS = { breakfast: Coffee, lunch: Sun, dinner: Moon, snack: Cookie };
 
@@ -95,6 +96,93 @@ function MealSlotRow({ slot, label, recipe, onOpenPicker, onRemove }) {
   );
 }
 
+function DayCard({
+  dateStr,
+  isSelected,
+  isToday,
+  day,
+  recipeById,
+  onOpenPicker,
+  onOpenNote,
+  addSnackSlot,
+  removeSlot,
+  reorderSlots,
+  phase,
+  macros,
+}) {
+  const date = new Date(dateStr + "T00:00:00");
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 8 } })
+  );
+
+  function handleSlotDragEnd(event) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const ids = day.slots.map((s) => s.id);
+    const oldIndex = ids.indexOf(active.id);
+    const newIndex = ids.indexOf(over.id);
+    reorderSlots(dateStr, arrayMove(ids, oldIndex, newIndex));
+  }
+
+  return (
+    <div
+      className="mp-index-card mp-day-card"
+      data-selected={isSelected ? "true" : "false"}
+      style={isToday ? { borderColor: "var(--mustard-deep)" } : undefined}
+    >
+      <div className="mp-day-card-header">
+        <span className="mp-day-card-title">
+          {date.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
+        </span>
+        {phase && (
+          <span className="mp-phase-pill" title={phase.description || undefined}>
+            {phase.emoji} {phase.label}
+          </span>
+        )}
+      </div>
+
+      {macros && (
+        <div className="mp-macro-strip" title="Suggested daily target for this phase — edit in cycle-sync settings">
+          <span>{macros.calories} kcal</span>
+          <span>{macros.carbs}g carb</span>
+          <span>{macros.protein}g protein</span>
+          <span>{macros.fat}g fat</span>
+        </div>
+      )}
+
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleSlotDragEnd}>
+        <SortableContext items={day.slots.map((s) => s.id)} strategy={verticalListSortingStrategy}>
+          {day.slots.map((slot) => (
+            <MealSlotRow
+              key={slot.id}
+              slot={slot}
+              label={slotLabel(slot, day.slots)}
+              recipe={slot.recipeId ? recipeById(slot.recipeId) : null}
+              onOpenPicker={() => onOpenPicker(dateStr, slot.id, slotLabel(slot, day.slots))}
+              onRemove={() => removeSlot(dateStr, slot.id)}
+            />
+          ))}
+        </SortableContext>
+      </DndContext>
+
+      <button className="mp-btn mp-add-snack" onClick={() => addSnackSlot(dateStr)}>
+        <Plus size={14} /> Add snack
+      </button>
+
+      <div className="mp-day-note-row" onClick={() => onOpenNote(dateStr)}>
+        <NotebookPen size={15} style={{ color: "var(--ink-soft)", flexShrink: 0 }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="mp-meal-slot-name">Meal prep notes</div>
+          <div className={day.note ? "mp-meal-slot-value mp-day-note-text" : "mp-meal-slot-empty mp-day-note-text"}>
+            {day.note || "Nothing noted for this day"}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PlanTab({
   weekStart,
   setWeekStart,
@@ -109,6 +197,8 @@ export default function PlanTab({
   removeSlot,
   canDuplicate,
   onDuplicateLastWeek,
+  getPhaseForDate,
+  cycleSettings,
 }) {
   const [selectedDayIdx, setSelectedDayIdx] = useState(() => {
     const d = new Date().getDay();
@@ -129,9 +219,6 @@ export default function PlanTab({
   }
 
   const dayOrder = doc.dayOrder;
-  const dateStr = dayOrder[selectedDayIdx];
-  const day = doc.days[dateStr] || { slots: [], note: "" };
-  const selectedDate = new Date(dateStr + "T00:00:00");
   const todayStr = fmtISO(new Date());
 
   const totalSlots = dayOrder.reduce((sum, d) => sum + (doc.days[d]?.slots.length || 0), 0);
@@ -147,15 +234,6 @@ export default function PlanTab({
     const oldIndex = dayOrder.indexOf(active.id);
     const newIndex = dayOrder.indexOf(over.id);
     reorderDays(arrayMove(dayOrder, oldIndex, newIndex));
-  }
-
-  function handleSlotDragEnd(event) {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const ids = day.slots.map((s) => s.id);
-    const oldIndex = ids.indexOf(active.id);
-    const newIndex = ids.indexOf(over.id);
-    reorderSlots(dateStr, arrayMove(ids, oldIndex, newIndex));
   }
 
   return (
@@ -192,7 +270,7 @@ export default function PlanTab({
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDayDragEnd}>
         <SortableContext items={dayOrder} strategy={horizontalListSortingStrategy}>
-          <div className="mp-scrollx">
+          <div className="mp-scrollx" style={{ marginBottom: 4 }}>
             {dayOrder.map((ds, i) => {
               const p = doc.days[ds] || { slots: [] };
               return (
@@ -212,43 +290,28 @@ export default function PlanTab({
         </SortableContext>
       </DndContext>
 
-      <div className="mp-index-card" style={{ padding: "14px 14px 10px 30px", marginTop: 10 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
-          <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 16 }}>
-            {selectedDate.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
-          </span>
-        </div>
-
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleSlotDragEnd}>
-          <SortableContext items={day.slots.map((s) => s.id)} strategy={verticalListSortingStrategy}>
-            {day.slots.map((slot) => (
-              <MealSlotRow
-                key={slot.id}
-                slot={slot}
-                label={slotLabel(slot, day.slots)}
-                recipe={slot.recipeId ? recipeById(slot.recipeId) : null}
-                onOpenPicker={() => onOpenPicker(dateStr, slot.id, slotLabel(slot, day.slots))}
-                onRemove={() => removeSlot(dateStr, slot.id)}
-              />
-            ))}
-          </SortableContext>
-        </DndContext>
-
-        <button className="mp-btn mp-add-snack" onClick={() => addSnackSlot(dateStr)}>
-          <Plus size={14} /> Add snack
-        </button>
-      </div>
-
-      <div className="mp-index-card" style={{ padding: "12px 14px 12px 30px", marginTop: 10, cursor: "pointer" }} onClick={() => onOpenNote(dateStr)}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <NotebookPen size={15} style={{ color: "var(--ink-soft)" }} />
-          <div style={{ flex: 1 }}>
-            <div className="mp-meal-slot-name">Meal prep notes</div>
-            <div className={day.note ? "mp-meal-slot-value" : "mp-meal-slot-empty"} style={{ fontSize: 13 }}>
-              {day.note || "Nothing noted for this day"}
-            </div>
-          </div>
-        </div>
+      <div className="mp-days-wrap">
+        {dayOrder.map((ds, i) => {
+          const phase = getPhaseForDate ? getPhaseForDate(ds) : null;
+          const macros = phase && cycleSettings ? macroTargetsFor(cycleSettings, phase.key) : null;
+          return (
+          <DayCard
+            key={ds}
+            dateStr={ds}
+            isSelected={i === selectedDayIdx}
+            isToday={ds === todayStr}
+            day={doc.days[ds] || { slots: [], note: "" }}
+            recipeById={recipeById}
+            onOpenPicker={onOpenPicker}
+            onOpenNote={onOpenNote}
+            addSnackSlot={addSnackSlot}
+            removeSlot={removeSlot}
+            reorderSlots={reorderSlots}
+            phase={phase}
+            macros={macros}
+          />
+          );
+        })}
       </div>
     </div>
   );
