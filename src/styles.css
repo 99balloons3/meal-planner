@@ -66,11 +66,10 @@ select {
 }
 
 .mp-header {
-  padding: 20px 18px 14px;
+  padding: 18px 18px 14px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .mp-brand {
@@ -104,7 +103,8 @@ select {
 .mp-header-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .mp-icon-btn {
@@ -136,7 +136,21 @@ select {
 }
 
 .mp-index-card {
-  background: var(--card);
+  background-color: var(--card);
+  /* Binder-hole punches down the left edge, drawn as a tiled background
+     instead of a couple of hardcoded box-shadow offsets — a background
+     image is clipped to the card automatically and repeats cleanly no
+     matter how tall the card ends up being, so it can never overflow a
+     short card or leave a gap on a tall one. */
+  background-image: radial-gradient(
+    circle 3px at 12px 8px,
+    var(--paper) 0 3px,
+    var(--line-strong) 3px 4px,
+    transparent 4px
+  );
+  background-repeat: repeat-y;
+  background-size: 100% 52px;
+  background-position: 0 8px;
   border-radius: 12px;
   border: 1px solid var(--line);
   position: relative;
@@ -152,21 +166,6 @@ select {
   width: 1px;
   background: var(--brick);
   opacity: 0.25;
-}
-
-.mp-index-card::after {
-  content: "";
-  position: absolute;
-  left: 12px;
-  top: 16px;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--paper);
-  border: 1px solid var(--line-strong);
-  box-shadow:
-    0 44px 0 var(--paper),
-    0 44px 0 1px var(--line-strong);
 }
 
 .mp-tabbar {
@@ -1049,6 +1048,13 @@ select {
     max-width: 1180px;
     margin: 0 auto;
     padding: 32px 32px 20px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .mp-header-actions {
+    justify-content: flex-start;
   }
 
   .mp-section {
