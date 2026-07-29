@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Check, RotateCcw, Sparkles } from "lucide-react";
 import { PHASE_ORDER, PHASES, macroTargetsFor } from "../../lib/cycle";
 
@@ -8,9 +9,30 @@ const MACRO_FIELDS = [
   { key: "fat", label: "fat (g)" },
 ];
 
+const MIN_CYCLE_LENGTH = 15;
+const MAX_CYCLE_LENGTH = 45;
+
 export default function CycleSettingsModal({ cycle, onClose }) {
   const { settings, setEnabled, setStartDate, setAvgCycleLength, setMacroTarget, resetMacroTargets } = cycle;
+
+  // Free-typed text, kept separate from the committed number so a value
+  // like "3" (on the way to "30") isn't clamped to 15 mid-keystroke.
+  const [cycleLengthText, setCycleLengthText] = useState(String(settings?.avgCycleLength ?? ""));
+
+  useEffect(() => {
+    setCycleLengthText(String(settings?.avgCycleLength ?? ""));
+  }, [settings?.avgCycleLength]);
+
   if (!settings) return null;
+
+  function commitCycleLength() {
+    const parsed = parseInt(cycleLengthText, 10);
+    const clamped = Number.isFinite(parsed)
+      ? Math.max(MIN_CYCLE_LENGTH, Math.min(MAX_CYCLE_LENGTH, parsed))
+      : settings.avgCycleLength;
+    setCycleLengthText(String(clamped));
+    if (clamped !== settings.avgCycleLength) setAvgCycleLength(clamped);
+  }
 
   return (
     <div className="mp-modal-backdrop" onClick={onClose}>
@@ -45,14 +67,21 @@ export default function CycleSettingsModal({ cycle, onClose }) {
             />
           </div>
           <div style={{ flex: 1 }}>
-            <label className="mp-label">Average cycle length</label>
+            <label className="mp-label">Average cycle length (days)</label>
             <input
               type="number"
-              min={15}
-              max={45}
+              min={MIN_CYCLE_LENGTH}
+              max={MAX_CYCLE_LENGTH}
               className="mp-input"
-              value={settings.avgCycleLength}
-              onChange={(e) => setAvgCycleLength(Math.max(15, Math.min(45, Number(e.target.value) || 28)))}
+              value={cycleLengthText}
+              onChange={(e) => setCycleLengthText(e.target.value)}
+              onBlur={commitCycleLength}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  e.currentTarget.blur();
+                }
+              }}
             />
           </div>
         </div>
