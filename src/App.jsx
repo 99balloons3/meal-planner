@@ -231,7 +231,6 @@ function MealBoxApp({ user, signOut }) {
           canDuplicate
           onDuplicateLastWeek={handleDuplicateLastWeek}
           getPhaseForDate={cycleEnabled ? getPhaseForDate : null}
-          cycleSettings={cycleEnabled ? cycle.settings : null}
         />
       )}
 

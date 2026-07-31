@@ -1,38 +1,39 @@
+// Food guidance (not numeric macro/calorie targets, by request) — general
+// nutrients that tend to help each phase, with a handful of example foods
+// leaning toward a vegan pantry. Meant as a friendly starting point, not a
+// medical or nutritional prescription.
 export const PHASES = {
   menstrual: {
     key: "menstrual",
     label: "Menstrual",
     emoji: "🩸",
-    description: "Lower energy — iron-rich, warming, easy-to-digest foods can help.",
+    description: "Iron and magnesium support",
+    foods: ["chickpeas", "tofu", "dark leafy greens", "dark chocolate"],
   },
   follicular: {
     key: "follicular",
     label: "Follicular",
     emoji: "🌱",
-    description: "Rising energy — lighter, fresh foods to match building energy.",
+    description: "Lighter, fresh, energizing foods",
+    foods: ["citrus", "apples", "sprouted grains", "tempeh"],
   },
   ovulatory: {
     key: "ovulatory",
     label: "Ovulatory",
     emoji: "☀️",
-    description: "Peak energy — fresh, vibrant, high-fiber foods.",
+    description: "Fiber and antioxidant-rich foods",
+    foods: ["colorful veggies like carrots & peppers", "berries", "flax", "chickpeas"],
   },
   luteal: {
     key: "luteal",
     label: "Luteal",
     emoji: "🌙",
-    description: "Winding down — more grounding, complex carbs can help with cravings.",
+    description: "Grounding, complex carbs and healthy fats",
+    foods: ["sweet potatoes", "oats", "peanut butter", "vegan chicken or tempeh"],
   },
 };
 
 export const PHASE_ORDER = ["menstrual", "follicular", "ovulatory", "luteal"];
-
-export const DEFAULT_MACRO_TARGETS = {
-  menstrual: { calories: 2100, carbs: 250, protein: 90, fat: 80 },
-  follicular: { calories: 2000, carbs: 230, protein: 100, fat: 65 },
-  ovulatory: { calories: 2050, carbs: 220, protein: 105, fat: 70 },
-  luteal: { calories: 2250, carbs: 270, protein: 95, fat: 85 },
-};
 
 function daysBetween(a, b) {
   return Math.floor((b.getTime() - a.getTime()) / 86400000);
@@ -70,10 +71,4 @@ export function phaseForDate(dateStr, settings) {
   else key = "luteal";
 
   return { ...PHASES[key], cycleDay, cycleLength: length };
-}
-
-export function macroTargetsFor(settings, phaseKey) {
-  const defaults = DEFAULT_MACRO_TARGETS[phaseKey] || {};
-  const overrides = settings?.macroTargets?.[phaseKey] || {};
-  return { ...defaults, ...overrides };
 }

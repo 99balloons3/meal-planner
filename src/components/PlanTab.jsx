@@ -31,7 +31,6 @@ import { CSS } from "@dnd-kit/utilities";
 import { addDays, fmtISO } from "../lib/date";
 import { DAY_NAMES } from "../lib/constants";
 import { slotLabel } from "../lib/weekDoc";
-import { macroTargetsFor } from "../lib/cycle";
 
 const SLOT_ICONS = { breakfast: Coffee, lunch: Sun, dinner: Moon, snack: Cookie };
 
@@ -108,7 +107,6 @@ function DayCard({
   removeSlot,
   reorderSlots,
   phase,
-  macros,
 }) {
   const date = new Date(dateStr + "T00:00:00");
   const sensors = useSensors(
@@ -142,13 +140,10 @@ function DayCard({
         )}
       </div>
 
-      {macros && (
-        <div className="mp-macro-strip" title="Suggested daily target for this phase — edit in cycle-sync settings">
-          <span>{macros.calories} kcal</span>
-          <span>{macros.carbs}g carb</span>
-          <span>{macros.protein}g protein</span>
-          <span>{macros.fat}g fat</span>
-        </div>
+      {phase && (
+        <p className="mp-phase-tip">
+          {phase.description} — {phase.foods.join(", ")}
+        </p>
       )}
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleSlotDragEnd}>
@@ -198,7 +193,6 @@ export default function PlanTab({
   canDuplicate,
   onDuplicateLastWeek,
   getPhaseForDate,
-  cycleSettings,
 }) {
   const [selectedDayIdx, setSelectedDayIdx] = useState(() => {
     const d = new Date().getDay();
@@ -291,10 +285,7 @@ export default function PlanTab({
       </DndContext>
 
       <div className="mp-days-wrap">
-        {dayOrder.map((ds, i) => {
-          const phase = getPhaseForDate ? getPhaseForDate(ds) : null;
-          const macros = phase && cycleSettings ? macroTargetsFor(cycleSettings, phase.key) : null;
-          return (
+        {dayOrder.map((ds, i) => (
           <DayCard
             key={ds}
             dateStr={ds}
@@ -307,11 +298,9 @@ export default function PlanTab({
             addSnackSlot={addSnackSlot}
             removeSlot={removeSlot}
             reorderSlots={reorderSlots}
-            phase={phase}
-            macros={macros}
+            phase={getPhaseForDate ? getPhaseForDate(ds) : null}
           />
-          );
-        })}
+        ))}
       </div>
     </div>
   );
