@@ -1,19 +1,12 @@
 import { useEffect, useState } from "react";
-import { Check, RotateCcw, Sparkles } from "lucide-react";
-import { PHASE_ORDER, PHASES, macroTargetsFor } from "../../lib/cycle";
-
-const MACRO_FIELDS = [
-  { key: "calories", label: "kcal" },
-  { key: "carbs", label: "carbs (g)" },
-  { key: "protein", label: "protein (g)" },
-  { key: "fat", label: "fat (g)" },
-];
+import { Check, Sparkles } from "lucide-react";
+import { PHASE_ORDER, PHASES } from "../../lib/cycle";
 
 const MIN_CYCLE_LENGTH = 15;
 const MAX_CYCLE_LENGTH = 45;
 
 export default function CycleSettingsModal({ cycle, onClose }) {
-  const { settings, setEnabled, setStartDate, setAvgCycleLength, setMacroTarget, resetMacroTargets } = cycle;
+  const { settings, setEnabled, setStartDate, setAvgCycleLength } = cycle;
 
   // Free-typed text, kept separate from the committed number so a value
   // like "3" (on the way to "30") isn't clamped to 15 mid-keystroke.
@@ -86,37 +79,22 @@ export default function CycleSettingsModal({ cycle, onClose }) {
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginTop: 8 }}>
-          <label className="mp-label" style={{ marginBottom: 0 }}>Daily macro targets by phase</label>
-          <button className="mp-btn-ghost" style={{ fontSize: 11.5, color: "var(--ink-soft)" }} onClick={resetMacroTargets}>
-            <RotateCcw size={12} style={{ verticalAlign: -1, marginRight: 4 }} />
-            Reset to defaults
-          </button>
-        </div>
+        <label className="mp-label" style={{ marginTop: 10 }}>Food guide by phase</label>
+        <p className="mp-sub" style={{ marginBottom: 10 }}>
+          General nutrients that tend to help, with a few example foods to get you started —
+          not a strict rule.
+        </p>
 
         {PHASE_ORDER.map((phaseKey) => {
           const phase = PHASES[phaseKey];
-          const targets = macroTargetsFor(settings, phaseKey);
           return (
             <div key={phaseKey} className="mp-index-card" style={{ padding: "10px 12px 12px 26px", marginTop: 8 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
-                {phase.emoji} {phase.label}
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 3 }}>
+                {phase.emoji} {phase.label} — {phase.description}
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
-                {MACRO_FIELDS.map((f) => (
-                  <div key={f.key}>
-                    <label className="mp-label" style={{ fontSize: 10, marginBottom: 3 }}>{f.label}</label>
-                    <input
-                      type="number"
-                      min={0}
-                      className="mp-input"
-                      style={{ padding: "6px 8px", fontSize: 12.5 }}
-                      value={targets[f.key]}
-                      onChange={(e) =>
-                        setMacroTarget(phaseKey, { ...targets, [f.key]: Number(e.target.value) || 0 })
-                      }
-                    />
-                  </div>
+              <div className="mp-recipe-tags">
+                {phase.foods.map((food) => (
+                  <span key={food} className="mp-tag">{food}</span>
                 ))}
               </div>
             </div>

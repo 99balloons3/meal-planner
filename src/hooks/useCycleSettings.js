@@ -13,7 +13,6 @@ function defaultSettings() {
     enabled: false,
     startDate: null,
     avgCycleLength: 28,
-    macroTargets: {},
     updatedAt: new Date().toISOString(),
   };
 }
@@ -24,7 +23,6 @@ function fromRow(row) {
     enabled: !!row.enabled,
     startDate: row.start_date,
     avgCycleLength: row.avg_cycle_length,
-    macroTargets: row.macro_targets || {},
     updatedAt: row.updated_at,
   };
 }
@@ -36,7 +34,6 @@ function toRow(settings, userId) {
     enabled: settings.enabled,
     start_date: settings.startDate,
     avg_cycle_length: settings.avgCycleLength,
-    macro_targets: settings.macroTargets,
     updated_at: settings.updatedAt,
   };
 }
@@ -112,23 +109,5 @@ export function useCycleSettings(userId) {
   const setStartDate = useCallback((startDate) => update({ startDate }), [update]);
   const setAvgCycleLength = useCallback((avgCycleLength) => update({ avgCycleLength }), [update]);
 
-  const setMacroTarget = useCallback(
-    (phaseKey, macros) => {
-      setSettings((prev) => {
-        const base = prev || defaultSettings();
-        const next = {
-          ...base,
-          macroTargets: { ...base.macroTargets, [phaseKey]: macros },
-          updatedAt: new Date().toISOString(),
-        };
-        persist(next);
-        return next;
-      });
-    },
-    [persist]
-  );
-
-  const resetMacroTargets = useCallback(() => update({ macroTargets: {} }), [update]);
-
-  return { settings, ready, setEnabled, setStartDate, setAvgCycleLength, setMacroTarget, resetMacroTargets };
+  return { settings, ready, setEnabled, setStartDate, setAvgCycleLength };
 }
