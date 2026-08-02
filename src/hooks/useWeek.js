@@ -107,7 +107,25 @@ export function useWeek(userId, weekStartIso, days) {
       updateDoc((draft) => {
         const day = (draft.days[dateStr] = ensureDay(draft, dateStr));
         const slot = day.slots.find((s) => s.id === slotId);
-        if (slot) slot.recipeId = recipeId;
+        if (slot) {
+          slot.recipeId = recipeId;
+          slot.quickAdd = null;
+        }
+        return draft;
+      });
+    },
+    [updateDoc]
+  );
+
+  const setQuickAdd = useCallback(
+    (dateStr, slotId, text, phaseTag) => {
+      updateDoc((draft) => {
+        const day = (draft.days[dateStr] = ensureDay(draft, dateStr));
+        const slot = day.slots.find((s) => s.id === slotId);
+        if (slot) {
+          slot.recipeId = null;
+          slot.quickAdd = { text, phaseTag: phaseTag || null };
+        }
         return draft;
       });
     },
@@ -118,7 +136,7 @@ export function useWeek(userId, weekStartIso, days) {
     (dateStr) => {
       updateDoc((draft) => {
         const day = (draft.days[dateStr] = ensureDay(draft, dateStr));
-        day.slots.push({ id: uid(), type: "snack", recipeId: null });
+        day.slots.push({ id: uid(), type: "snack", recipeId: null, quickAdd: null });
         return draft;
       });
     },
@@ -221,6 +239,7 @@ export function useWeek(userId, weekStartIso, days) {
     doc,
     ready,
     setMeal,
+    setQuickAdd,
     addSnackSlot,
     removeSlot,
     reorderSlots,

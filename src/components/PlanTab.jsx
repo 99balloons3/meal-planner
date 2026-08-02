@@ -30,7 +30,8 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { addDays, fmtISO } from "../lib/date";
 import { DAY_NAMES } from "../lib/constants";
-import { slotLabel } from "../lib/weekDoc";
+import { slotLabel, isSlotFilled } from "../lib/weekDoc";
+import { PHASES } from "../lib/cycle";
 
 const SLOT_ICONS = { breakfast: Coffee, lunch: Sun, dinner: Moon, snack: Cookie };
 
@@ -81,11 +82,16 @@ function MealSlotRow({ slot, label, recipe, onOpenPicker, onRemove }) {
         <div className="mp-meal-slot-name">{label}</div>
         {recipe ? (
           <div className="mp-meal-slot-value">{recipe.name}</div>
+        ) : slot.quickAdd ? (
+          <div className="mp-meal-slot-value">
+            {slot.quickAdd.phaseTag && `${PHASES[slot.quickAdd.phaseTag]?.emoji} `}
+            {slot.quickAdd.text}
+          </div>
         ) : (
           <div className="mp-meal-slot-empty">Tap to add a recipe</div>
         )}
       </div>
-      {recipe && <div style={{ color: "var(--ink-faint)" }}><ChevronRight size={16} /></div>}
+      {(recipe || slot.quickAdd) && <div style={{ color: "var(--ink-faint)" }}><ChevronRight size={16} /></div>}
       {slot.type === "snack" && (
         <button className="mp-meal-remove" onClick={onRemove} aria-label="Remove snack slot">
           <X size={15} />
@@ -217,10 +223,10 @@ export default function PlanTab({
 
   const totalSlots = dayOrder.reduce((sum, d) => sum + (doc.days[d]?.slots.length || 0), 0);
   const filledSlots = dayOrder.reduce(
-    (sum, d) => sum + (doc.days[d]?.slots.filter((s) => s.recipeId).length || 0),
+    (sum, d) => sum + (doc.days[d]?.slots.filter(isSlotFilled).length || 0),
     0
   );
-  const daysStarted = dayOrder.filter((d) => (doc.days[d]?.slots || []).some((s) => s.recipeId)).length;
+  const daysStarted = dayOrder.filter((d) => (doc.days[d]?.slots || []).some(isSlotFilled)).length;
 
   function handleDayDragEnd(event) {
     const { active, over } = event;
@@ -273,7 +279,7 @@ export default function PlanTab({
                   dateStr={ds}
                   index={i}
                   selected={i === selectedDayIdx}
-                  filled={p.slots.filter((s) => s.recipeId).length}
+                  filled={p.slots.filter(isSlotFilled).length}
                   total={Math.max(p.slots.length, 1)}
                   isToday={ds === todayStr}
                   onSelect={() => setSelectedDayIdx(i)}
