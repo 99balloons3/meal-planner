@@ -7,7 +7,7 @@ import { useSyncStatus } from "./hooks/useSyncStatus";
 import { useCycleSettings } from "./hooks/useCycleSettings";
 import { addDays, fmtISO, getMonday } from "./lib/date";
 import { SECTIONS } from "./lib/constants";
-import { duplicateWeek } from "./lib/weekDoc";
+import { duplicateWeek, isSlotFilled } from "./lib/weekDoc";
 import { phaseForDate } from "./lib/cycle";
 
 import AuthGate from "./components/AuthGate";
@@ -131,14 +131,14 @@ function MealBoxApp({ user, signOut }) {
 
   async function handleDuplicateLastWeek() {
     if (!week.doc) return;
-    const currentHasMeals = week.doc.dayOrder.some((d) => (week.doc.days[d]?.slots || []).some((s) => s.recipeId));
+    const currentHasMeals = week.doc.dayOrder.some((d) => (week.doc.days[d]?.slots || []).some(isSlotFilled));
     if (currentHasMeals && !window.confirm("This replaces your currently planned meals for this week. Continue?")) {
       return;
     }
     const prevWeekStart = addDays(weekStart, -7);
     const prevDays = Array.from({ length: 7 }, (_, i) => addDays(prevWeekStart, i));
     const prevDoc = await loadWeekDoc(user.id, fmtISO(prevWeekStart), prevDays);
-    const hasPrevMeals = prevDoc.dayOrder.some((d) => (prevDoc.days[d]?.slots || []).some((s) => s.recipeId));
+    const hasPrevMeals = prevDoc.dayOrder.some((d) => (prevDoc.days[d]?.slots || []).some(isSlotFilled));
     if (!hasPrevMeals) {
       flashToast("Last week is empty — nothing to duplicate");
       return;
@@ -287,10 +287,16 @@ function MealBoxApp({ user, signOut }) {
           recipes={recipes}
           slotLabel={pickerSlot.label}
           current={week.doc.days[pickerSlot.dateStr]?.slots.find((s) => s.id === pickerSlot.slotId)?.recipeId}
+          currentQuickAdd={week.doc.days[pickerSlot.dateStr]?.slots.find((s) => s.id === pickerSlot.slotId)?.quickAdd}
           phase={pickerPhase}
+          cycleEnabled={cycleEnabled}
           onClose={() => setPickerSlot(null)}
           onSelect={(rid) => {
             week.setMeal(pickerSlot.dateStr, pickerSlot.slotId, rid);
+            setPickerSlot(null);
+          }}
+          onQuickAdd={(text, phaseTag) => {
+            week.setQuickAdd(pickerSlot.dateStr, pickerSlot.slotId, text, phaseTag);
             setPickerSlot(null);
           }}
           onClear={() => {

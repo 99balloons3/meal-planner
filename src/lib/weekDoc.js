@@ -2,11 +2,17 @@ import { uid, fmtISO, addDays } from "./date";
 
 export function defaultDaySlots() {
   return [
-    { id: uid(), type: "breakfast", recipeId: null },
-    { id: uid(), type: "lunch", recipeId: null },
-    { id: uid(), type: "dinner", recipeId: null },
-    { id: uid(), type: "snack", recipeId: null },
+    { id: uid(), type: "breakfast", recipeId: null, quickAdd: null },
+    { id: uid(), type: "lunch", recipeId: null, quickAdd: null },
+    { id: uid(), type: "dinner", recipeId: null, quickAdd: null },
+    { id: uid(), type: "snack", recipeId: null, quickAdd: null },
   ];
+}
+
+// A slot is "filled" whether it holds a saved recipe or a one-off quick-add
+// entry (free text, never written to the recipes table).
+export function isSlotFilled(slot) {
+  return Boolean(slot?.recipeId || slot?.quickAdd);
 }
 
 export function emptyWeekDoc(weekStartIso, days) {
